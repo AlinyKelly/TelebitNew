@@ -3,6 +3,7 @@ package botoes
 import br.com.sankhya.extensions.actionbutton.AcaoRotinaJava
 import br.com.sankhya.extensions.actionbutton.ContextoAcao
 import br.com.sankhya.jape.core.JapeSession
+import br.com.sankhya.jape.core.JapeSession.SessionHandle
 import br.com.sankhya.jape.vo.DynamicVO
 import br.com.sankhya.jape.wrapper.JapeFactory
 import br.com.sankhya.jape.wrapper.fluid.FluidCreateVO
@@ -84,6 +85,11 @@ class ImportarBOQ : AcaoRotinaJava {
                         val statusBOQ = json.statusBOQ.trim()
                         val qtdNeg = converterValorMonetario(json.qtdBOQ.trim())
                         val vlrUnit = converterValorMonetario(json.vltUnitItem.trim())
+
+                        val tipoServico = json.tipoServico.trim();
+                        val percIss = json.percIss.trim();
+
+
 //                        val statusFin: String
 //
 //                        when (statusBOQ) {
@@ -149,6 +155,10 @@ class ImportarBOQ : AcaoRotinaJava {
 
                         println("ID Atividade = $idAtividade")
 
+
+                        if ("702".equals(tipoServico)) {
+                            cadastraAliqIss(tipoServico, percIss, municipio, codProd);
+                        }
                         if (loteBOQInfo == null) {
                             println("Inserir a BOQ na tela de Gestão")
                             var hnd2: JapeSession.SessionHandle? = null
@@ -183,6 +193,13 @@ class ImportarBOQ : AcaoRotinaJava {
                             // Atualizar o campo NUNOTABOQ na tela de Gestão
                             // Se gerar algum erro no processo salvar o erro no campo de erro ou em  alguma tela de LOG
 
+
+
+                            //todo:
+                            //Criar nota BOQ
+                            //Atualizar nunotaBOQ na tela AD_TGESPROJ
+                            //Confirmar nota BOQ
+                            //Tratar erro no log
                             val jsonString = """{
                                                "serviceName":"CACSP.incluirNota",
                                                "requestBody":{
@@ -264,11 +281,15 @@ class ImportarBOQ : AcaoRotinaJava {
                                                }
                                             }""".trimIndent()
 
-                            val (postbody) = post("mgecom/service.sbr?serviceName=CACSP.incluirNota&outputType=json",jsonString)
+                            val (postbody) = post(
+                                "mgecom/service.sbr?serviceName=CACSP.incluirNota&outputType=json",
+                                jsonString
+                            )
                             val status = getPropFromJSON("status", postbody)
 
                             if (status == "1") {
-                                val nunotaRetorno = getPropFromJSON("responseBody.pk.NUNOTA.${'$'}", postbody).toBigDecimal()
+                                val nunotaRetorno =
+                                    getPropFromJSON("responseBody.pk.NUNOTA.${'$'}", postbody).toBigDecimal()
 
                                 var hnd3: JapeSession.SessionHandle? = null
                                 try {
@@ -287,12 +308,18 @@ class ImportarBOQ : AcaoRotinaJava {
                                 val statusConfirmar = getPropFromJSON("status", postbodyConfirmar)
                                 if (statusConfirmar == "0") {
                                     val statusMessage = getPropFromJSON("statusMessage", postbodyConfirmar)
-                                    inserirErroLOG("ID Atividade Nro. $idAtividade - Erro: $statusMessage", "API Confirmar Nota - Status não confirmado")
+                                    inserirErroLOG(
+                                        "ID Atividade Nro. $idAtividade - Erro: $statusMessage",
+                                        "API Confirmar Nota - Status não confirmado"
+                                    )
                                 }
 
                             } else {
                                 val statusMessage = getPropFromJSON("statusMessage", postbody)
-                                inserirErroLOG("ID Atividade nro $idAtividade - Erro: $statusMessage", "API Criar Orçamento - Erro ao criar orçamento.")
+                                inserirErroLOG(
+                                    "ID Atividade nro $idAtividade - Erro: $statusMessage",
+                                    "API Criar Orçamento - Erro ao criar orçamento."
+                                )
                             }
 
                         }
@@ -311,6 +338,41 @@ class ImportarBOQ : AcaoRotinaJava {
 
         //MENSAGEM DE RETORNO
         contextoAcao.setMensagemRetorno("Lançamento(s) inserido(s) com sucesso! Verifique a tela de Gestão de Projetos.")
+    }
+
+    private fun cadastraAliqIss(tipoServico: String, percIss: String, municipio: String, codProd: BigDecimal?) {
+
+
+        val cidVo = JapeHelper.getVO("Cidade", "UPPER(NOMECID) LIKE UPPER('%${municipio}%')")
+
+        if (cidVo == null) {
+            throw Exception("Município não encontrado no sistema: $municipio")
+        }
+
+        val issVo = JapeHelper.getVO("AliquotaISS", "CODCID = ${cidVo.asBigDecimal("CODCID")} AND CODPROD = $codProd AND CODLST = $tipoServico");
+
+        if (issVo != null) {
+            return;
+        }
+
+
+        var hnd: SessionHandle? = null
+        try {
+            hnd = JapeSession.open()
+            val aliqIss = JapeFactory.dao("AliquotaISS").create()
+            aliqIss.set("CODCID", cidVo.asBigDecimal("CODCID"))
+            aliqIss.set("CODEMP", BigDecimal.ONE)
+            aliqIss.set("CODPROD", codProd)
+            aliqIss.set("CODLST", BigDecimal(tipoServico))
+            aliqIss.set("PERCINSS", BigDecimal(percIss))
+            aliqIss.save()
+        } catch (e: Exception) {
+            MGEModelException.throwMe(e)
+        } finally {
+            JapeSession.close(hnd)
+        }
+
+
     }
 
     private fun getReplaceFileInfo(line: String): String {
@@ -352,7 +414,9 @@ class ImportarBOQ : AcaoRotinaJava {
             cells[15],
             cells[16],
             cells[17],
-            cells[18]
+            cells[18],
+            cells[19],
+            cells[20]
         ) else
             null
 
@@ -467,7 +531,9 @@ class ImportarBOQ : AcaoRotinaJava {
         val vlrItemLPU: String,
         val vltUnitItem: String,
         val vlrItem: String,
-        val statusBOQ: String
+        val statusBOQ: String,
+        val tipoServico: String,
+        val percIss: String
     )
 
 }

@@ -11,7 +11,7 @@ import br.com.sankhya.modelcore.util.EntityFacadeFactory
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import com.sankhya.ce.jape.JapeHelper
+import utilitarios.JapeHelper
 import utilitarios.getPropFromJSON
 import utilitarios.post
 import utilitarios.retornaVO

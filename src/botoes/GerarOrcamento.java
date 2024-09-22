@@ -8,7 +8,8 @@ import br.com.sankhya.jape.vo.DynamicVO;
 import br.com.sankhya.jape.wrapper.JapeFactory;
 import br.com.sankhya.modelcore.MGEModelException;
 import br.com.sankhya.modelcore.comercial.impostos.ImpostosHelpper;
-import com.sankhya.ce.jape.JapeHelper;
+import utilitarios.JapeHelper;
+
 
 import java.math.BigDecimal;
 import java.util.ArrayList;

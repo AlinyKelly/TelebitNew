@@ -5,7 +5,7 @@ import br.com.sankhya.extensions.actionbutton.ContextoAcao
 import br.com.sankhya.jape.core.JapeSession
 import br.com.sankhya.jape.wrapper.JapeFactory
 import br.com.sankhya.modelcore.MGEModelException
-import com.sankhya.ce.jape.JapeHelper
+import utilitarios.JapeHelper
 import utilitarios.getPropFromJSON
 import utilitarios.post
 import java.math.BigDecimal

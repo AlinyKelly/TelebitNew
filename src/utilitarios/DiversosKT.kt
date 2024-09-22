@@ -100,8 +100,8 @@ data class GetPropertyFromObject(val data: Any?, val type: String)
         val urlWithQueryParams = httpBuilder.build()
 
         // Instância o client
-        val client = OkHttpClient().newBuilder().connectTimeout(10, TimeUnit.SECONDS)
-            .writeTimeout(10, TimeUnit.SECONDS)
+        val client = OkHttpClient().newBuilder().connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS).build()
 
         // Define o contentType
