@@ -236,6 +236,14 @@ class ImportarBOQ : AcaoRotinaJava {
                                     throw Exception("Não foi possível inserir item na nota da BOQ gerada: \n${e.localizedMessage}")
                                 }
 
+
+                                try{
+                                    JapeHelper.atualizarImpostos(nuNotaBOQ);
+                                } catch (e: Exception) {
+                                    throw Exception("Não foi possível atualizar os impostos da nota da BOQ gerada: \n${e.localizedMessage}")
+                                }
+
+
                                 //confirmar nota
                                 try {
                                     JapeHelper.confirmarNota(nuNotaBOQ)
@@ -243,12 +251,6 @@ class ImportarBOQ : AcaoRotinaJava {
                                     throw Exception("Não foi possível confirmar a nota da BOQ gerada: \n${e.localizedMessage}")
                                 }
 
-
-                                try{
-                                    JapeHelper.atualizarImpostos(nuNotaBOQ);
-                                } catch (e: Exception) {
-                                    throw Exception("Não foi possível atualizar os impostos da nota da BOQ gerada: \n${e.localizedMessage}")
-                                }
 
 
                                 try {
