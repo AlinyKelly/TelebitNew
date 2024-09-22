@@ -6,6 +6,7 @@ import br.com.sankhya.jape.core.JapeSession
 import br.com.sankhya.jape.core.JapeSession.SessionHandle
 import br.com.sankhya.jape.vo.DynamicVO
 import br.com.sankhya.jape.wrapper.JapeFactory
+import br.com.sankhya.jape.wrapper.JapeWrapper
 import br.com.sankhya.jape.wrapper.fluid.FluidCreateVO
 import br.com.sankhya.modelcore.MGEModelException
 import br.com.sankhya.ws.ServiceContext
@@ -150,7 +151,7 @@ class ImportarBOQ : AcaoRotinaJava {
                         val dataInclusao = buscarInfos?.asTimestamp("DATAINC")
                         val top = contextoAcao.getParametroSistema("TOPBOQ") as BigDecimal
                         val tipoVenda = contextoAcao.getParametroSistema("TIPNEGBOQ") as BigDecimal
-                        val nunotaBOQ = buscarInfos?.asBigDecimal("NUNOTABOQ")
+                        var nuNotaBOQ = buscarInfos?.asBigDecimal("NUNOTABOQ")
                         val loteBOQInfo = buscarInfos?.asBigDecimal("LOTEBOQ")
 
                         println("ID Atividade = $idAtividade")
@@ -161,9 +162,9 @@ class ImportarBOQ : AcaoRotinaJava {
                         }
                         if (loteBOQInfo == null) {
                             println("Inserir a BOQ na tela de Gestão")
-                            var hnd2: JapeSession.SessionHandle? = null
+
                             try {
-                                hnd2 = JapeSession.open()
+
                                 JapeFactory.dao("AD_TGESPROJ").prepareToUpdateByPK(idAtividade.toBigDecimal())
                                     .set("LOTEBOQ", loteBOQ.toBigDecimal())
                                     .set("TIPOBOQ", tipoBOQ)
@@ -179,14 +180,12 @@ class ImportarBOQ : AcaoRotinaJava {
                                     .update()
 
                             } catch (e: Exception) {
-                                MGEModelException.throwMe(e)
-                            } finally {
-                                JapeSession.close(hnd2)
+                                throw Exception("Não foi possível atualizar dados da BOQ na tela de Gestão: \n${e.localizedMessage}")
                             }
                         }
 
                         //Criar o orçamento
-                        if (nunotaBOQ == null) {
+                        if (nuNotaBOQ == null) {
                             println("GERAR O LANÇAMENTO DA BOQ AQUI")
                             // Criar o JSON com as informações necessárias para criar o lançamento
                             // Enviar o json e receber o NUNOTA enviado no retorno.
@@ -195,132 +194,76 @@ class ImportarBOQ : AcaoRotinaJava {
 
 
 
-                            //todo:
-                            //Criar nota BOQ
-                            //Atualizar nunotaBOQ na tela AD_TGESPROJ
-                            //Confirmar nota BOQ
-                            //Tratar erro no log
-                            val jsonString = """{
-                                               "serviceName":"CACSP.incluirNota",
-                                               "requestBody":{
-                                                  "nota":{
-                                                     "cabecalho":{
-                                                        "NUNOTA":{
-                                                        },
-                                                        "CODPARC":{
-                                                           "${'$'}":"$parceiro"
-                                                        },
-                                                        "DTNEG":{
-                                                           "${'$'}":"${json.dataInclusaoBOQ.trim()}"
-                                                        },
-                                                        "CODTIPOPER":{
-                                                           "${'$'}":"$top"
-                                                        },
-                                                        "CODTIPVENDA":{
-                                                           "${'$'}":"$tipoVenda"
-                                                        },
-                                                        "CODVEND":{
-                                                           "${'$'}":"0"
-                                                        },
-                                                        "CODEMP":{
-                                                           "${'$'}":"$empresa"
-                                                        },
-                                                        "TIPMOV":{
-                                                           "${'$'}":"P"
-                                                        },
-                                                        "NUMCONTRATO":{
-                                                           "${'$'}":"$contrato"
-                                                        },
-                                                        "CODPROJ":{
-                                                           "${'$'}":"$projeto"
-                                                        },
-                                                        "AD_LOTEBOQ":{
-                                                           "${'$'}":"$loteBOQ"
-                                                        },
-                                                        "AD_NUFAP":{
-                                                           "${'$'}":"$nufap"
-                                                        },
-                                                        "AD_NUMETAPA":{
-                                                           "${'$'}":"$etapa"
-                                                        },
-                                                        "AD_IDATIVIDADE":{
-                                                           "${'$'}":"$idAtividade"
-                                                        }
-                                                     },
-                                                     "itens":{
-                                                        "INFORMARPRECO":"True",
-                                                        "item":[
-                                                              {
-                                                               "NUNOTA":{
-                                                              },
-                                                              "CODPROD":{
-                                                                 "${'$'}":"$codProd"
-                                                              },
-                                                              "QTDNEG":{
-                                                                 "${'$'}":"$qtdNeg"
-                                                              },
-                                                              "CODLOCALORIG":{
-                                                                 "${'$'}":"0"
-                                                              },
-                                                              "CODVOL":{
-                                                                 "${'$'}":"$codvol"
-                                                              },
-                                                              "PERCDESC": {
-                                                                "${'$'}": "0"
-                                                              },
-                                                             "VLRUNIT": {
-                                                                "${'$'}": "$vlrUnit"
-                                                              },
-                                                             "AD_NUMETAPA": {
-                                                                "${'$'}": "$etapa"
-                                                              }
-                                                           }               
-                                                        ]
-                                                     }
-                                                  }
-                                               }
-                                            }""".trimIndent()
+                            try {
 
-                            val (postbody) = post(
-                                "mgecom/service.sbr?serviceName=CACSP.incluirNota&outputType=json",
-                                jsonString
-                            )
-                            val status = getPropFromJSON("status", postbody)
 
-                            if (status == "1") {
-                                val nunotaRetorno =
-                                    getPropFromJSON("responseBody.pk.NUNOTA.${'$'}", postbody).toBigDecimal()
+                                val cabDAO: JapeWrapper = JapeFactory.dao("CabecalhoNota");
+                                val novaCab = cabDAO.create()
+                                novaCab.set("CODPARC", parceiro)
+                                novaCab.set("DTNEG", dataInc)
+                                novaCab.set("CODTIPOPER", top)
+                                novaCab.set("CODTIPVENDA", tipoVenda)
+                                novaCab.set("CODVEND",BigDecimal.ZERO)
+                                novaCab.set("CODEMP", empresa)
+                                novaCab.set("TIPMOV", "P")
+                                novaCab.set("NUMCONTRATO", contrato)
+                                novaCab.set("CODPROJ", projeto)
+                                novaCab.set("AD_LOTEBOQ", BigDecimal(loteBOQ))
+                                novaCab.set("AD_NUFAP", nufap)
+                                novaCab.set("AD_NUMETAPA", etapa)
+                                novaCab.set("AD_IDATIVIDADE", BigDecimal(idAtividade))
+                                novaCab.set("NUMNOTA",BigDecimal.ZERO)
+                                val novaCabVO = novaCab.save();
 
-                                var hnd3: JapeSession.SessionHandle? = null
+                                nuNotaBOQ = novaCabVO.asBigDecimal("NUNOTA");
+
                                 try {
-                                    hnd3 = JapeSession.open()
-                                    JapeFactory.dao("AD_TGESPROJ").prepareToUpdateByPK(idAtividade.toBigDecimal())
-                                        .set("NUNOTABOQ", nunotaRetorno)
+                                    val iteDAO: JapeWrapper = JapeFactory.dao("ItemNota");
+                                    val novoIte = iteDAO.create()
+                                    novoIte.set("NUNOTA", nuNotaBOQ)
+                                    novoIte.set("CODPROD", codProd)
+                                    novoIte.set("QTDNEG", qtdNeg)
+                                    novoIte.set("CODLOCALORIG", BigDecimal.ZERO)
+                                    novoIte.set("CODVOL", codvol)
+                                    novoIte.set("PERCDESC", BigDecimal.ZERO)
+                                    novoIte.set("VLRUNIT", vlrUnit)
+                                    novoIte.set("VLRTOT", vlrUnit.multiply(qtdNeg))
+                                    novoIte.set("AD_NUMETAPA", etapa)
+                                    novoIte.save()
+
+
+                                } catch (e: Exception) {
+                                    throw Exception("Não foi possível inserir item na nota da BOQ gerada: \n${e.localizedMessage}")
+                                }
+
+                                //confirmar nota
+                                try {
+                                    JapeHelper.confirmarNota(nuNotaBOQ)
+                                } catch (e: Exception) {
+                                    throw Exception("Não foi possível confirmar a nota da BOQ gerada: \n${e.localizedMessage}")
+                                }
+
+
+                                try{
+                                    JapeHelper.atualizarImpostos(nuNotaBOQ);
+                                } catch (e: Exception) {
+                                    throw Exception("Não foi possível atualizar os impostos da nota da BOQ gerada: \n${e.localizedMessage}")
+                                }
+
+
+                                try {
+                                    JapeFactory.dao("AD_TGESPROJ").prepareToUpdateByPK(BigDecimal(idAtividade))
+                                        .set("NUNOTABOQ", nuNotaBOQ)
                                         .update()
                                 } catch (e: Exception) {
-                                    MGEModelException.throwMe(e)
-                                } finally {
-                                    JapeSession.close(hnd3)
+                                    throw Exception("Erro ao preencher o NUNOTA da BOQ: \n ${e.localizedMessage}")
                                 }
 
-                                //Confirmar a nota
-                                val postbodyConfirmar = confirmarNotaAPI(nunotaRetorno)
-                                val statusConfirmar = getPropFromJSON("status", postbodyConfirmar)
-                                if (statusConfirmar == "0") {
-                                    val statusMessage = getPropFromJSON("statusMessage", postbodyConfirmar)
-                                    inserirErroLOG(
-                                        "ID Atividade Nro. $idAtividade - Erro: $statusMessage",
-                                        "API Confirmar Nota - Status não confirmado"
-                                    )
-                                }
 
-                            } else {
-                                val statusMessage = getPropFromJSON("statusMessage", postbody)
-                                inserirErroLOG(
-                                    "ID Atividade nro $idAtividade - Erro: $statusMessage",
-                                    "API Criar Orçamento - Erro ao criar orçamento."
-                                )
+                            } catch (e: Exception) {
+                                throw Exception("Não foi possível criar a nota da BOQ: \n${e.localizedMessage} \n")
                             }
+
 
                         }
 
@@ -331,13 +274,13 @@ class ImportarBOQ : AcaoRotinaJava {
 
         } catch (e: Exception) {
             //throw MGEModelException("$e $ultimaLinhaJson ")
-            inserirErroLOG("$e $ultimaLinhaJson ", "Importação - Erro na linha importada.")
+            inserirErroLOG("${e.localizedMessage} - $ultimaLinhaJson ", "Importação - Erro na linha importada.")
         } finally {
             JapeSession.close(hnd)
         }
 
         //MENSAGEM DE RETORNO
-        contextoAcao.setMensagemRetorno("Lançamento(s) inserido(s) com sucesso! Verifique a tela de Gestão de Projetos.")
+        contextoAcao.setMensagemRetorno("Lançamento(s) processado(s)! Verifique a tela de Gestão de Projetos.")
     }
 
     private fun cadastraAliqIss(tipoServico: String, percIss: String, municipio: String, codProd: BigDecimal?) {
@@ -349,7 +292,10 @@ class ImportarBOQ : AcaoRotinaJava {
             throw Exception("Município não encontrado no sistema: $municipio")
         }
 
-        val issVo = JapeHelper.getVO("AliquotaISS", "CODCID = ${cidVo.asBigDecimal("CODCID")} AND CODPROD = $codProd AND CODLST = $tipoServico");
+        val issVo = JapeHelper.getVO(
+            "AliquotaISS",
+            "CODCID = ${cidVo.asBigDecimal("CODCID")} AND CODPROD = $codProd AND CODLST = $tipoServico"
+        );
 
         if (issVo != null) {
             return;
@@ -365,6 +311,8 @@ class ImportarBOQ : AcaoRotinaJava {
             aliqIss.set("CODPROD", codProd)
             aliqIss.set("CODLST", BigDecimal(tipoServico))
             aliqIss.set("PERCINSS", BigDecimal(percIss))
+            aliqIss.set("CODTRIBISS",BigDecimal(1))
+            aliqIss.set("CODTRIBMUNISS", "70201216")
             aliqIss.save()
         } catch (e: Exception) {
             MGEModelException.throwMe(e)

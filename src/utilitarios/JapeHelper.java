@@ -7,7 +7,13 @@ import br.com.sankhya.jape.wrapper.JapeWrapper;
 import br.com.sankhya.jape.wrapper.fluid.FluidCreateVO;
 import br.com.sankhya.jape.wrapper.fluid.FluidUpdateVO;
 import br.com.sankhya.modelcore.MGEModelException;
+import br.com.sankhya.modelcore.auth.AuthenticationInfo;
+import br.com.sankhya.modelcore.comercial.BarramentoRegra;
+import br.com.sankhya.modelcore.comercial.CentralFaturamento;
+import br.com.sankhya.modelcore.comercial.ConfirmacaoNotaHelper;
+import br.com.sankhya.modelcore.comercial.impostos.ImpostosHelpper;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -298,6 +304,19 @@ public class JapeHelper {
         public void setInstance(String instance) {
             this.instance = instance;
         }
+    }
+
+
+    public static void confirmarNota(BigDecimal nuNota) throws Exception {
+        BarramentoRegra barramentoConfirmacao = BarramentoRegra.build(CentralFaturamento.class,
+                "regrasConfirmacaoSilenciosa.xml", AuthenticationInfo.getCurrent());
+        barramentoConfirmacao.setValidarSilencioso(true);
+        ConfirmacaoNotaHelper.confirmarNota(nuNota, barramentoConfirmacao);
+    }
+
+    public static void atualizarImpostos(BigDecimal nuNota) throws Exception {
+        ImpostosHelpper impostohelp = new ImpostosHelpper();
+        impostohelp.calcularImpostos(nuNota);// IPI, ICMS e etc..
     }
 
 }
