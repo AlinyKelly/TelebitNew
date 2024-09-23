@@ -68,7 +68,7 @@ class ImportarStatus : AcaoRotinaJava{
                         try {
                             hnd2 = JapeSession.open()
                             JapeFactory.dao("AD_TGESPROJ").prepareToUpdateByPK(idAtividade.toBigDecimal())
-                                .set("STATUSBOQ", json.statusBOQ.trim())
+                                .set("STATUSFIN", json.statusBOQ.trim())
                                 .update()
                         } catch (e: Exception) {
                             MGEModelException.throwMe(e)
