@@ -85,10 +85,12 @@ class ImportarFS : AcaoRotinaJava {
                         val nunotaPO = buscarInfos?.asBigDecimal("NUNOTAPO")
                         val tipoOperacao = contextoAcao.getParametroSistema("TOPFS")
                         val serieTipoOperacao = contextoAcao.getParametroSistema("SERIETOPFS")
-                        val nunotaFS = buscarInfos?.asBigDecimalOrZero("NUNOTAFS")
+                        val nunotaFS = buscarInfos?.asBigDecimal("NUNOTAFS")
                         val nroFS = buscarInfos?.asString("NROFS")
 
+
                         if (nroFS == null) {
+
                             var hnd2: JapeSession.SessionHandle? = null
                             try {
                                 hnd2 = JapeSession.open()
@@ -106,6 +108,7 @@ class ImportarFS : AcaoRotinaJava {
                         }
 
                         if (nunotaFS == null) {
+
                             val jsonString = """{
                               "serviceName": "SelecaoDocumentoSP.faturar",
                               "requestBody": {
