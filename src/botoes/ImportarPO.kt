@@ -89,7 +89,7 @@ class ImportarPO : AcaoRotinaJava {
                                 hnd2 = JapeSession.open()
                                 JapeFactory.dao("AD_TGESPROJ").prepareToUpdateByPK(idAtividade.toBigDecimal())
                                     .set("PEDIDO", pedidoPO)
-                                    .set("ITEMPO", itemPO.toBigDecimal())
+                                    .set("ITEMPO", itemPO.toBigDecimal()) //Campo não é visivel ao usuário mas preenche o campo CODPROD via expressão de campo com o valor deste campo.
                                     .set("DTEMISSAOPO", stringToTimeStamp(emissaoPO))
                                     .set("DTAPROVPO", stringToTimeStamp(aprovacaoPO))
                                     .set("DTPRAZO", stringToTimeStamp(prazo))
