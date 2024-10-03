@@ -9,6 +9,8 @@ import br.com.sankhya.jape.wrapper.fluid.FluidCreateVO
 import br.com.sankhya.modelcore.MGEModelException
 import br.com.sankhya.ws.ServiceContext
 import org.apache.commons.io.FileUtils
+import utilitarios.JapeHelper
+import utilitarios.JapeHelper.CreateNewLine
 import utilitarios.confirmarNotaAPI
 import utilitarios.getFluidCreateVO
 import utilitarios.getPropFromJSON
@@ -88,28 +90,17 @@ class ImportarFS : AcaoRotinaJava {
                         val nunotaFS = buscarInfos?.asBigDecimal("NUNOTAFS")
                         val nroFS = buscarInfos?.asString("NROFS")
 
+                        val listaFS = JapeHelper.getVO("AD_TGESPROJFS", "NUMFS = " + folhaSevico);
 
-                        if (nroFS == null) {
+                        if (listaFS == null) {
 
-                            var hnd2: JapeSession.SessionHandle? = null
+                            var hndFS: JapeSession.SessionHandle? = null
+
+
                             try {
-                                hnd2 = JapeSession.open()
-                                JapeFactory.dao("AD_TGESPROJ").prepareToUpdateByPK(idAtividade.toBigDecimal())
-                                    .set("NROFS", folhaSevico)
-                                    .set("QTDFS", qtdFS)
-                                    .set("DTEMISSAOFS", stringToTimeStamp(emissaoFS))
-                                    .set("STATUSFS", statusFS)
-                                    .update()
-                            } catch (e: Exception) {
-                                MGEModelException.throwMe(e)
-                            } finally {
-                                JapeSession.close(hnd2)
-                            }
-                        }
 
-                        if (nunotaFS == null) {
 
-                            val jsonString = """{
+                                val jsonString = """{
                               "serviceName": "SelecaoDocumentoSP.faturar",
                               "requestBody": {
                                 "notas": {
@@ -169,31 +160,41 @@ class ImportarFS : AcaoRotinaJava {
                               }
                             }""".trimIndent()
 
-                            val (postbody) = post(
-                                "mgecom/service.sbr?serviceName=SelecaoDocumentoSP.faturar&outputType=json",
-                                jsonString
-                            )
-                            val status = getPropFromJSON("status", postbody)
+                                val (postbody) = post(
+                                    "mgecom/service.sbr?serviceName=SelecaoDocumentoSP.faturar&outputType=json",
+                                    jsonString
+                                )
+                                val status = getPropFromJSON("status", postbody)
 
-                            if (status == "1") {
-                                val nunotaRetorno = getPropFromJSON("responseBody.notas.nota.${'$'}", postbody)
+                                if (status == "1") {
+                                    val nunotaRetorno = getPropFromJSON("responseBody.notas.nota.${'$'}", postbody)
+                                    hndFS = JapeSession.open();
 
-                                var hnd4: JapeSession.SessionHandle? = null
-                                try {
-                                    hnd4 = JapeSession.open()
-                                    JapeFactory.dao("AD_TGESPROJ").prepareToUpdateByPK(idAtividade.toBigDecimal())
-                                        .set("NUNOTAFS", nunotaRetorno.toBigDecimal())
-                                        .update()
-                                } catch (e: Exception) {
-                                    MGEModelException.throwMe(e)
-                                } finally {
-                                    JapeSession.close(hnd4)
+                                    val novaLinhaFS: CreateNewLine = JapeHelper.CreateNewLine("AD_TGESPROJFS");
+                                    novaLinhaFS.set("NUMFS", folhaSevico.toBigDecimal())
+                                    novaLinhaFS.set("IDATIVIDADE", idAtividade.toBigDecimal())
+                                    novaLinhaFS.set("NUNOTAFS",nunotaRetorno.toBigDecimal())
+                                    novaLinhaFS.set("QTDFS", qtdFS)
+                                    novaLinhaFS.set("EMISSAOFS", stringToTimeStamp(emissaoFS))
+                                    novaLinhaFS.set("STATUSFS", statusFS)
+                                    novaLinhaFS.save()
+
+                                } else {
+                                    val statusMessage = getPropFromJSON("statusMessage", postbody)
+                                    inserirErroLOG(
+                                        "ID Atividade nro $idAtividade - Erro: $statusMessage",
+                                        "API - Erro ao criar Folha de Serviço."
+                                    )
                                 }
 
-                            } else {
-                                val statusMessage = getPropFromJSON("statusMessage", postbody)
-                                inserirErroLOG("ID Atividade nro $idAtividade - Erro: $statusMessage", "API - Erro ao criar Folha de Serviço.")
+
+                            } catch (e: Exception) {
+                                throw Exception("Erro ao criar FS" + e.message)
+                            } finally {
+                                JapeSession.close(hndFS)
                             }
+
+
                         }
 
                         line = br.readLine()
@@ -264,6 +265,7 @@ class ImportarFS : AcaoRotinaJava {
         logErroLinha.set("ORIGEMERRO", origemErro)
         logErroLinha.save()
     }
+
 
     @Throws(MGEModelException::class)
     fun retornaVO(instancia: String?, where: String?): DynamicVO? {
