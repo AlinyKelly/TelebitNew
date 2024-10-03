@@ -86,7 +86,7 @@ class ImportarBOQ : AcaoRotinaJava {
                         val statusBOQ = json.statusBOQ.trim()
                         val qtdNeg = converterValorMonetario(json.qtdBOQ.trim())
                         val vlrUnit = converterValorMonetario(json.vltUnitItem.trim())
-
+                        val vlrItemLPU = converterValorMonetario(json.vlrItemLPU.trim())
                         val tipoServico = json.tipoServico.trim();
                         val percIss = json.percIss.trim();
 
@@ -153,9 +153,14 @@ class ImportarBOQ : AcaoRotinaJava {
                         val tipoVenda = contextoAcao.getParametroSistema("TIPNEGBOQ") as BigDecimal
                         var nuNotaBOQ = buscarInfos?.asBigDecimal("NUNOTABOQ")
                         val loteBOQInfo = buscarInfos?.asBigDecimal("LOTEBOQ")
+                        val vlrUnitarioNet = buscarInfos?.asBigDecimalOrZero("VLRUNIT");
+
 
                         println("ID Atividade = $idAtividade")
 
+                        if(!(vlrUnitarioNet?.equals(vlrItemLPU) == true)){
+                            throw Exception("Valor unitário do item diferente do valor unitário LPU informado na planilha: " + idAtividade)
+                        }
 
                         if ("702".equals(tipoServico)) {
                             cadastraAliqIss(tipoServico, percIss, municipio, codProd);
