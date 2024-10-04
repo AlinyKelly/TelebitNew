@@ -234,6 +234,7 @@ class ImportarBOQ : AcaoRotinaJava {
                                     novoIte.set("VLRUNIT", vlrUnit)
                                     novoIte.set("VLRTOT", vlrUnit.multiply(qtdNeg))
                                     novoIte.set("AD_NUMETAPA", etapa)
+                                    novoIte.set("USOPROD","S")
                                     novoIte.save()
 
 
