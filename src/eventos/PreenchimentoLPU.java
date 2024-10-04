@@ -28,6 +28,7 @@ public class PreenchimentoLPU implements EventoProgramavelJava {
 
             if (tcsPreVO != null){
                 projVO.setProperty("VLRUNIT", tcsPreVO.asBigDecimalOrZero("VALOR"));
+                projVO.setProperty("ITEMPO", tcsPreVO.asBigDecimalOrZero("CODPROD"));
             }
 
 
@@ -50,11 +51,12 @@ public class PreenchimentoLPU implements EventoProgramavelJava {
                 && !chaveLPU.isEmpty()
         ){
 
-            DynamicVO tcsPreVO = JapeHelper.getVO("PrecoContrato","NUMCONTRATO = " + numContrato + " AND CODPROd = (SELECT CODPROD FROM TCSPSC WHERE AD_CHAVELPU LIKE '"+chaveLPU+"' AND TCSPSC.NUMCONTRATO = TCSPRE.NUMCONTRATO) " );
+            DynamicVO tcsPreVO = JapeHelper.getVO("PrecoContrato","AD_CHAVELPU LIKE '"+chaveLPU+"' AND NUMCONTRATO = " + numContrato );
 
 
             if (tcsPreVO != null){
                 projVO.setProperty("VLRUNIT", tcsPreVO.asBigDecimalOrZero("VALOR"));
+                projVO.setProperty("ITEMPO", tcsPreVO.asBigDecimalOrZero("CODPROD"));
             }
 
 
