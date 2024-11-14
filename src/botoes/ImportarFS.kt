@@ -8,10 +8,15 @@ import br.com.sankhya.jape.wrapper.JapeFactory
 import br.com.sankhya.jape.wrapper.fluid.FluidCreateVO
 import br.com.sankhya.modelcore.MGEModelException
 import br.com.sankhya.ws.ServiceContext
+import com.sankhya.util.TimeUtils
+import okhttp3.MediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
 import org.apache.commons.io.FileUtils
+import org.json.JSONObject
 import utilitarios.JapeHelper
 import utilitarios.JapeHelper.CreateNewLine
-import utilitarios.confirmarNotaAPI
 import utilitarios.getFluidCreateVO
 import utilitarios.getPropFromJSON
 import utilitarios.post
@@ -24,12 +29,22 @@ import java.sql.Timestamp
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 class ImportarFS : AcaoRotinaJava {
 
     private var codImportador: BigDecimal? = null
+    private val client: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(60, TimeUnit.SECONDS) // Timeout de conexão
+        .writeTimeout(60, TimeUnit.SECONDS) // Timeout de escrita
+        .readTimeout(60, TimeUnit.SECONDS) // Timeout de leitura
+        .build()
+    private val jSessionId: String = ServiceContext.getCurrent().httpSessionId
+    private val url: String = ServiceContext.getCurrent().httpRequest.localAddr
+    private val port = ServiceContext.getCurrent().httpRequest.localPort.toString()
+    private val urlCompleta = "http://$url:$port"
 
     @Throws(MGEModelException::class, IOException::class)
     override fun doAction(contextoAcao: ContextoAcao) {
@@ -89,6 +104,8 @@ class ImportarFS : AcaoRotinaJava {
                         val serieTipoOperacao = contextoAcao.getParametroSistema("SERIETOPFS")
                         val nunotaFS = buscarInfos?.asBigDecimal("NUNOTAFS")
                         val nroFS = buscarInfos?.asString("NROFS")
+                        val statusProd = buscarInfos?.asString("STATUSPROD")
+                        val prazo = buscarInfos?.asTimestamp("DTPRAZO");
 
                         val listaFS = JapeHelper.getVO("AD_TGESPROJFS", "NUMFS = " + folhaSevico);
 
@@ -103,6 +120,8 @@ class ImportarFS : AcaoRotinaJava {
                                 val jsonString = """{
                               "serviceName": "SelecaoDocumentoSP.faturar",
                               "requestBody": {
+                              "emissao":"$emissaoFS",
+                              "prazo":"${TimeUtils.formataDDMMYYYY(prazo)}",
                                 "notas": {
                                   "codTipOper": $tipoOperacao,
                                   "dtFaturamento": "$emissaoFS",
@@ -173,11 +192,20 @@ class ImportarFS : AcaoRotinaJava {
                                     val novaLinhaFS: CreateNewLine = JapeHelper.CreateNewLine("AD_TGESPROJFS");
                                     novaLinhaFS.set("NUMFS", folhaSevico.toBigDecimal())
                                     novaLinhaFS.set("IDATIVIDADE", idAtividade.toBigDecimal())
-                                    novaLinhaFS.set("NUNOTAFS",nunotaRetorno.toBigDecimal())
+                                    novaLinhaFS.set("NUNOTAFS", nunotaRetorno.toBigDecimal())
                                     novaLinhaFS.set("QTDFS", qtdFS)
                                     novaLinhaFS.set("EMISSAOFS", stringToTimeStamp(emissaoFS))
                                     novaLinhaFS.set("STATUSFS", statusFS)
                                     novaLinhaFS.save()
+
+
+                                    JapeHelper.setCampo("STATUSPROD", "10", buscarInfos, "AD_TGESPROJ");
+                                    JapeHelper.setCampo(
+                                        "AVANCO",
+                                        getVlrAvanco(idAtividade),
+                                        buscarInfos,
+                                        "AD_TGESPROJ");
+
 
                                 } else {
                                     val statusMessage = getPropFromJSON("statusMessage", postbody)
@@ -211,6 +239,84 @@ class ImportarFS : AcaoRotinaJava {
         }
 
         contextoAcao.setMensagemRetorno("Lançamento(s) inserido(s) com sucesso! Verifique a tela de Gestão de Projetos.")
+    }
+
+    private fun atualizaEmissaoFS(nunotaRetorno: String, emissao: String) {
+
+        val jsonString = """
+                {
+                  "serviceName": "ActionButtonsSP.executeJava",
+                  "requestBody": {
+                    "nunota":"$nunotaRetorno",
+                    "prazo":"$emissao",
+                    "javaCall": {
+                      "actionID": "79"
+                    }
+                  }
+                }
+            """.trimIndent()
+
+        // Monta o JSON usando JSONObject
+
+
+        // Monta a requisição
+        val mediaType = MediaType.parse("application/json; charset=utf-8")
+
+        val body = RequestBody.create(mediaType, jsonString)
+        val request: Request = Request.Builder()
+            .url(urlCompleta + "/mge/service.sbr?serviceName=ActionButtonsSP.executeJava&outputType=json&mgeSession=" + jSessionId)
+            .post(body)
+            .addHeader("cookie", "JSESSIONID=$jSessionId.master")
+            .addHeader("Content-Type", "application/json;charset=utf-8")
+            .build()
+
+        // Envia a requisição
+        try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful()) {
+                    val jsonResponse: JSONObject = JSONObject(response.body()?.string())
+
+                    if (jsonResponse.has("responseBody")) {
+                        val responseBody = jsonResponse.getJSONObject("responseBody")
+                        val status = jsonResponse.getString("status")
+                        if (status == "1") {
+
+                        } else {
+                            throw java.lang.Exception("Erro ao atualizar data de negociação da FS:$jsonResponse")
+                        }
+                    } else {
+                        throw java.lang.Exception("Erro ao atualizar data de negociação da FS II:$jsonResponse")
+                    }
+                } else {
+                    throw java.lang.Exception(
+                        """
+                        Erro ao iniciar processo: 
+                        response:${response.body()?.string()}
+                        """.trimIndent()
+                    )
+                }
+            }
+        } catch (e: java.lang.Exception) {
+            throw java.lang.Exception( "Erro ao atualizar vencimento da PO: ${e.localizedMessage}" )
+        }
+
+
+
+    }
+
+    private fun getVlrAvanco(idAtividade: String): Any? {
+
+        val tgesProj = JapeHelper.getVO("AD_TGESPROJ", "IDATIVIDADE = " + idAtividade.toBigDecimal());
+        val qtdNeg = tgesProj?.asBigDecimal("QTDNEG");
+        val tgesProjFS = JapeHelper.getVOs("AD_TGESPROJFS", "IDATIVIDADE = " + idAtividade.toBigDecimal());
+        var qtdFS = BigDecimal.ZERO;
+
+        for (fs in tgesProjFS) {
+            qtdFS = qtdFS.add(fs.asBigDecimal("QTDFS"));
+        }
+
+
+        return qtdFS.divide(qtdNeg).multiply(BigDecimal(100));
     }
 
     private fun getReplaceFileInfo(line: String): String {

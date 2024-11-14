@@ -158,9 +158,9 @@ class ImportarBOQ : AcaoRotinaJava {
 
                         println("ID Atividade = $idAtividade")
 
-                        if(!(vlrUnitarioNet?.equals(vlrItemLPU) == true)){
-                            throw Exception("Valor unitário do item diferente do valor unitário LPU informado na planilha: " + idAtividade)
-                        }
+//                        if(!(vlrUnitarioNet?.equals(vlrItemLPU) == true)){
+//                            throw Exception("Valor unitário do item diferente do valor unitário LPU informado na planilha: " + idAtividade)
+//                        }
 
                         if ("702".equals(tipoServico)) {
                             cadastraAliqIss(tipoServico, percIss, municipio, codProd);
@@ -206,6 +206,10 @@ class ImportarBOQ : AcaoRotinaJava {
                                 val novaCab = cabDAO.create()
                                 novaCab.set("CODPARC", parceiro)
                                 novaCab.set("DTNEG", dataInc)
+                                novaCab.set("DTFATUR", dataInc)
+                                novaCab.set("DTENTSAI", dataInc)
+                                novaCab.set("DTMOV", dataInc)
+                                novaCab.set("DTALTER", dataInc)
                                 novaCab.set("CODTIPOPER", top)
                                 novaCab.set("CODTIPVENDA", tipoVenda)
                                 novaCab.set("CODVEND",BigDecimal.ZERO)
@@ -219,7 +223,7 @@ class ImportarBOQ : AcaoRotinaJava {
                                 novaCab.set("AD_IDATIVIDADE", BigDecimal(idAtividade))
                                 novaCab.set("NUMNOTA",BigDecimal.ZERO)
                                 val novaCabVO = novaCab.save();
-
+                                //contextoAcao.mostraErro("Variável contrato: $contrato | Valor contrato Salvo: ${novaCabVO.asBigDecimal("NUMCONTRATO")}")
                                 nuNotaBOQ = novaCabVO.asBigDecimal("NUNOTA");
 
                                 try {
