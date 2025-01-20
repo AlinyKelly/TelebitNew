@@ -28,7 +28,8 @@ public class PreenchimentoLPU implements EventoProgramavelJava {
 
             if (tcsPreVO != null){
                 projVO.setProperty("VLRUNIT", tcsPreVO.asBigDecimalOrZero("VALOR"));
-                projVO.setProperty("ITEMPO", tcsPreVO.asBigDecimalOrZero("CODPROD"));
+                //projVO.setProperty("ITEMPO", tcsPreVO.asBigDecimalOrZero("CODPROD"));
+                projVO.setProperty("CODPROD", tcsPreVO.asBigDecimalOrZero("CODPROD"));
             }
 
 
@@ -56,7 +57,8 @@ public class PreenchimentoLPU implements EventoProgramavelJava {
 
             if (tcsPreVO != null){
                 projVO.setProperty("VLRUNIT", tcsPreVO.asBigDecimalOrZero("VALOR"));
-                projVO.setProperty("ITEMPO", tcsPreVO.asBigDecimalOrZero("CODPROD"));
+                //projVO.setProperty("ITEMPO", tcsPreVO.asBigDecimalOrZero("CODPROD"));
+                projVO.setProperty("CODPROD", tcsPreVO.asBigDecimalOrZero("CODPROD")); //Alterado para preencher este campo que é referente ao Item LPU
             }
 
 
