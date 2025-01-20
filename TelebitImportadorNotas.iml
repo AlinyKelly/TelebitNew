@@ -8,6 +8,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="KotlinJavaRuntime" level="project" />
-    <orderEntry type="library" name="libs SANKHYA PEC" level="project" />
+    <orderEntry type="library" name="Bibliotecas" level="project" />
   </component>
 </module>

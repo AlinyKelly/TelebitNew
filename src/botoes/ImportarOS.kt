@@ -9,6 +9,7 @@ import br.com.sankhya.jape.wrapper.JapeFactory
 import br.com.sankhya.jape.wrapper.JapeWrapper
 import br.com.sankhya.jape.wrapper.fluid.FluidCreateVO
 import br.com.sankhya.modelcore.MGEModelException
+import br.com.sankhya.modelcore.util.DynamicEntityNames
 import br.com.sankhya.ws.ServiceContext
 import com.sankhya.util.TimeUtils
 import org.apache.commons.io.FileUtils
@@ -24,6 +25,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.regex.Matcher
 import java.util.regex.Pattern
+
 
 /*
 * Botão para importar as informações da BOQ
@@ -76,7 +78,7 @@ class ImportarOS : AcaoRotinaJava {
                         val fornecedor = json.fornecedor.trim().toBigDecimal()
                         val cnpj = json.cnpj.trim()
                         val idAtividade = json.idAtividade.trim()
-                        val solicitante = json.solicitante.trim()
+                        val solicitante = json.solicitante.trim().toBigDecimal()
                         val blm = json.blm.trim()
                         val previsaoFat = json.previsaoFat.trim()
                         val categoria = json.categoria.trim()
@@ -85,61 +87,11 @@ class ImportarOS : AcaoRotinaJava {
                         val endId = json.endId.trim()
                         val cidadePrest = json.cidadePrest.trim()
                         val poBoq = json.poBoq.trim()
-                        val os = json.os.trim()
+                        //val os = json.os.trim()
                         val quantidade = converterValorMonetario(json.quantidade.trim())
                         val vlrUnit = converterValorMonetario(json.vlrUnit.trim())
                         val servico = json.servico.trim().toBigDecimal()
 
-
-
-
-//                        val statusFin: String
-//
-//                        when (statusBOQ) {
-//                            "BOQ Solicitada" -> {
-//                                statusFin = "1"
-//                            }
-//
-//                            "Criado" -> {
-//                                statusFin = "2"
-//                            }
-//
-//                            "Pedido de PO" -> {
-//                                statusFin = "3"
-//                            }
-//
-//                            "PO Emitido" -> {
-//                                statusFin = "4"
-//                            }
-//
-//                            "Reprovado" -> {
-//                                statusFin = "5"
-//                            }
-//
-//                            "Revisado" -> {
-//                                statusFin = "6"
-//                            }
-//
-//                            "Revisão" -> {
-//                                statusFin = "7"
-//                            }
-//
-//                            "RP" -> {
-//                                statusFin = "8"
-//                            }
-//
-//                            "Ag. Faturamento" -> {
-//                                statusFin = "9"
-//                            }
-//
-//                            "Faturado" -> {
-//                                statusFin = "10"
-//                            }
-//
-//                            else -> {
-//                                statusFin = "N"
-//                            }
-//                        }
 
                         val buscarInfos = retornaVO("AD_TGESPROJ", "IDATIVIDADE = ${idAtividade.toBigDecimal()}")
                         val nufap = buscarInfos?.asBigDecimal("NUFAP")
@@ -153,58 +105,69 @@ class ImportarOS : AcaoRotinaJava {
                         val dataInclusao = buscarInfos?.asTimestamp("DATAINC")
                         val top = contextoAcao.getParametroSistema("TOPOS") as BigDecimal
                         val tipoVenda = contextoAcao.getParametroSistema("TIPNEGOS") as BigDecimal
-                        var nuNotaOS = buscarInfos?.asBigDecimal("NUNOTAOS")
+
                         val oc = buscarInfos?.asString("OC")
                         val vlrUnitarioNet = buscarInfos?.asBigDecimalOrZero("VLRUNIT");
 
+                        var nuNotaOS = BigDecimal.ZERO
+
+                        var nroOS = BigDecimal.ZERO
 
                         println("ID Atividade = $idAtividade")
 
+                        println("Inserir a OS na tela de Gestão")
 
+                        try {
 
-                            println("Inserir a OS na tela de Gestão")
+                            JapeFactory.dao("AD_TGESPROJ").prepareToUpdateByPK(idAtividade.toBigDecimal())
+                                .set("BLM", blm)
+                                .set("CODPROD", servico)
+                                .update()
 
-                            try {
+                        } catch (e: Exception) {
+                            throw Exception("Não foi possível atualizar dados da OS na tela de Gestão: \n${e.localizedMessage}")
+                        }
 
-                                JapeFactory.dao("AD_TGESPROJ").prepareToUpdateByPK(idAtividade.toBigDecimal())
-                                    .set("OC", os)
-                                    .set("CODPARCOS",fornecedor)
-                                    .set("CNPJ",cnpj)
-                                    .set("SOLICITANTE", solicitante)
-                                    .set("BLM", blm)
-                                    .set("PREVISAOFAT", stringToTimeStamp(previsaoFat))
-                                    .set("CATEGORIA", categoria)
-                                    .set("PROJETO", projeto)
-                                    .set("QUANTIDADEOS", quantidade)
-                                    .set("VLRUNITOS", vlrUnit)
-                                    .set("CODPROD", servico)
-                                    .update()
+                        //Inserir dados da OS na tela detalhe AD_TGESPROJOS
+                        try {
+                            val detalheOrdemServicoDAO: JapeWrapper = JapeFactory.dao("AD_TGESPROJOS")
+                            val detalheOrdemServico = detalheOrdemServicoDAO.create()
+                            detalheOrdemServico.set("IDATIVIDADE", BigDecimal(idAtividade))
+                            detalheOrdemServico.set("CODPARCOS",fornecedor)
+                            detalheOrdemServico.set("CNPJ",cnpj)
+                            detalheOrdemServico.set("SOLICITANTE", solicitante)
+                            detalheOrdemServico.set("PREVISAOFAT", stringToTimeStamp(previsaoFat))
+                            detalheOrdemServico.set("CATEGORIA", categoria)
+                            detalheOrdemServico.set("PROJETO", projeto)
+                            detalheOrdemServico.set("QUANTIDADEOS", quantidade)
+                            detalheOrdemServico.set("VLRUNITOS", vlrUnit)
+                            val detalhamentoVO = detalheOrdemServico.save()
 
-                            } catch (e: Exception) {
-                                throw Exception("Não foi possível atualizar dados da OS na tela de Gestão: \n${e.localizedMessage}")
-                            }
+                            nroOS = detalhamentoVO.asBigDecimal("NROOS")
+
+                        } catch (e: Exception) {
+                            throw Exception("Não foi possível inserir dados da OS na tela de Ordem de Serviço: \n${e.localizedMessage}")
+                        }
                         
 
                         //Criar o orçamento
-                        if (nuNotaOS == null) {
+//                        if (nuNotaOS == null) {
                             println("GERAR O LANÇAMENTO DA OS AQUI")
                             // Criar o JSON com as informações necessárias para criar o lançamento
                             // Enviar o json e receber o NUNOTA enviado no retorno.
                             // Atualizar o campo NUNOTABOQ na tela de Gestão
                             // Se gerar algum erro no processo salvar o erro no campo de erro ou em  alguma tela de LOG
 
-
-
                             try {
-
 
                                 val cabDAO: JapeWrapper = JapeFactory.dao("CabecalhoNota");
                                 val novaCab = cabDAO.create()
+                                novaCab.set("NUMNOTA", BigDecimal.ZERO)
                                 novaCab.set("CODPARC", fornecedor)
                                 novaCab.set("DTNEG", TimeUtils.getNow())
                                 novaCab.set("CODTIPOPER", top)
                                 novaCab.set("CODTIPVENDA", tipoVenda)
-                                novaCab.set("CODVEND",BigDecimal.ZERO)
+                                novaCab.set("CODVEND", solicitante)
                                 novaCab.set("CODEMP", empresa)
                                 novaCab.set("TIPMOV", "O")
                                 novaCab.set("NUMCONTRATO", contrato)
@@ -212,10 +175,12 @@ class ImportarOS : AcaoRotinaJava {
                                 novaCab.set("AD_NUFAP", nufap)
                                 novaCab.set("AD_NUMETAPA", etapa)
                                 novaCab.set("AD_IDATIVIDADE", BigDecimal(idAtividade))
-                                novaCab.set("NUMNOTA",os.toBigDecimal())
-                                val novaCabVO = novaCab.save();
+                                val novaCabVO = novaCab.save()
 
-                                nuNotaOS = novaCabVO.asBigDecimal("NUNOTA");
+                                nuNotaOS = novaCabVO.asBigDecimal("NUNOTA")
+
+                                //O campo NUMNOTA deve receber o valor do NUNOTA criado
+                                atualizarNumnota(nuNotaOS)
 
                                 try {
                                     val iteDAO: JapeWrapper = JapeFactory.dao("ItemNota");
@@ -230,7 +195,6 @@ class ImportarOS : AcaoRotinaJava {
                                     novoIte.set("VLRTOT", vlrUnit.multiply(quantidade))
                                     novoIte.set("AD_NUMETAPA", etapa)
                                     novoIte.save()
-
 
                                 } catch (e: Exception) {
                                     throw Exception("Não foi possível inserir item na nota da OS gerada: \n${e.localizedMessage}")
@@ -251,28 +215,27 @@ class ImportarOS : AcaoRotinaJava {
                                     throw Exception("Não foi possível confirmar a nota da OS gerada: \n${e.localizedMessage}")
                                 }
 
-
-
                                 try {
-                                    JapeFactory.dao("AD_TGESPROJ").prepareToUpdateByPK(BigDecimal(idAtividade))
+                                    JapeFactory.dao("AD_TGESPROJOS").prepareToUpdateByPK(BigDecimal(idAtividade), nroOS)
                                         .set("NUNOTAOS", nuNotaOS)
                                         .update()
                                 } catch (e: Exception) {
                                     throw Exception("Erro ao preencher o NUNOTA da OS: \n ${e.localizedMessage}")
                                 }
 
-
                             } catch (e: Exception) {
                                 throw Exception("Não foi possível criar a nota da OS: \n${e.localizedMessage} \n")
                             }
 
-
-                        }
+//                        }
 
                         line = br.readLine()
                     }
                 }
             }
+
+            //MENSAGEM DE RETORNO
+            contextoAcao.setMensagemRetorno("Lançamento(s) processado(s)! Verifique a tela de Gestão de Projetos.")
 
         } catch (e: Exception) {
             //throw MGEModelException("$e $ultimaLinhaJson ")
@@ -281,8 +244,21 @@ class ImportarOS : AcaoRotinaJava {
             JapeSession.close(hnd)
         }
 
-        //MENSAGEM DE RETORNO
-        contextoAcao.setMensagemRetorno("Lançamento(s) processado(s)! Verifique a tela de Gestão de Projetos.")
+    }
+
+    private fun atualizarNumnota(nuNotaOS: BigDecimal?) {
+        var hnd: SessionHandle? = null
+        try {
+            hnd = JapeSession.open()
+
+            JapeFactory.dao(DynamicEntityNames.CABECALHO_NOTA).prepareToUpdateByPK(nuNotaOS)
+                .set("NUMNOTA", nuNotaOS)
+                .update()
+        } catch (e: Exception) {
+            throw Exception(e)
+        } finally {
+            JapeSession.close(hnd)
+        }
     }
 
 
@@ -321,8 +297,7 @@ class ImportarOS : AcaoRotinaJava {
             cells[11],
             cells[12],
             cells[13],
-            cells[14],
-            cells[15]
+            cells[14]
         ) else
             null
 
@@ -431,7 +406,7 @@ class ImportarOS : AcaoRotinaJava {
         val endId: String,
         val cidadePrest: String,
         val poBoq: String,
-        val os: String,
+//        val os: String,
         val quantidade: String,
         val vlrUnit: String,
         val servico: String
