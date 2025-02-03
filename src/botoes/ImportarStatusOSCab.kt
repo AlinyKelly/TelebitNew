@@ -60,14 +60,14 @@ class ImportarStatusOSCab : AcaoRotinaJava {
                         ultimaLinhaJson = json
 
                         val nuNota = json.nunota.trim().toBigDecimal()
-                        val statusOS = json.statusOS.trim().toBigDecimal()
+                        val statusOS = json.statusOS.trim()
 
                         val cabecalhoVO = retornaVO("CabecalhoNota", "NUNOTA = $nuNota")
                         val codtipoper = cabecalhoVO?.asBigDecimal("CODTIPOPER")
                         val statusnota = cabecalhoVO?.asString("STATUSNOTA")
 
                         //atualizacao aqui
-                        if (codtipoper!!.intValueExact() == 1304 && statusnota != "L") {
+                        if (codtipoper!!.intValueExact() == 1304 && statusnota.equals("L")) {
                             atualizarStatusOS(nuNota, statusOS)
                         }
 
@@ -88,7 +88,7 @@ class ImportarStatusOSCab : AcaoRotinaJava {
 
     }
 
-    private fun atualizarStatusOS(nunota: BigDecimal?, statusOs: BigDecimal?) {
+    private fun atualizarStatusOS(nunota: BigDecimal?, statusOs: String) {
         var hnd: SessionHandle? = null
         try {
             hnd = JapeSession.open()
