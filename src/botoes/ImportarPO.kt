@@ -90,7 +90,7 @@ class ImportarPO : AcaoRotinaJava {
                         val prazo = json.prazo.trim()
                         val valorPedido = converterValorMonetario(json.valorPedido.trim())
                         val municipio = json.municipio.trim()
-                        val qtd = json.qtd.trim().toBigDecimal()
+                        val qtd = converterValorMonetario(json.qtd.trim())
 
                         val buscarInfos = retornaVO("AD_TGESPROJ", "IDATIVIDADE = ${idAtividade.toBigDecimal()}")
                         val nunotaBOQ = buscarInfos?.asBigDecimal("NUNOTABOQ")
