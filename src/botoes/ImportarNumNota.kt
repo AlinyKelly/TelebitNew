@@ -75,8 +75,11 @@ class ImportarNumNota : AcaoRotinaJava {
                             try {
                                 JapeHelper.confirmarNota(nuNota)
                             } catch (e: Exception) {
-                                throw  Exception("Não foi possível confirmar o Nro. Único $nuNota: \n${e.localizedMessage}")
+                                //throw  Exception("Não foi possível confirmar o Nro. Único $nuNota: \n${e.localizedMessage}")
+                                inserirErroLOG("${e.localizedMessage} - $ultimaLinhaJson ", "Não foi possível confirmar o Nro. Único $nuNota")
                             }
+                        } else {
+                            inserirErroLOG("$ultimaLinhaJson", "Lançamento confirmado ou com Tipo de Operação diferente de 1421.")
                         }
 
                         line = br.readLine()
