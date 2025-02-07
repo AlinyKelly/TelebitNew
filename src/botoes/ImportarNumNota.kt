@@ -11,6 +11,7 @@ import br.com.sankhya.modelcore.MGEModelException
 import br.com.sankhya.modelcore.util.DynamicEntityNames
 import br.com.sankhya.ws.ServiceContext
 import org.apache.commons.io.FileUtils
+import utilitarios.JapeHelper
 import utilitarios.getFluidCreateVO
 import java.io.BufferedReader
 import java.io.File
@@ -70,6 +71,12 @@ class ImportarNumNota : AcaoRotinaJava {
                         //atualizacao aqui
                         if (codtipoper!!.intValueExact() == 1421 && statusnota != "L") {
                             atualizarNumnota(nuNota, numNota)
+
+                            try {
+                                JapeHelper.confirmarNota(nuNota)
+                            } catch (e: Exception) {
+                                throw  Exception("Não foi possível confirmar o Nro. Único $nuNota: \n${e.localizedMessage}")
+                            }
                         }
 
                         line = br.readLine()
